@@ -1,0 +1,7 @@
+spotipy>=2.23
+powerlaw>=1.5
+statsmodels>=0.14
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+scipy>=1.10
