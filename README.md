@@ -5,7 +5,7 @@ consistent with "winner-take-all" dynamics, and whether concentration has
 increased over time — with a panel regression testing candidate drivers
 (Discover Weekly-era algorithmic curation, TikTok-era virality).
 
-Analysis has been done for a span of a decade (2014-2024)
+Analysis has been done for a span of almost a decade (2016-2025)
 
 ## The one thing to read before you do anything else
 
