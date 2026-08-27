@@ -5,6 +5,8 @@ consistent with "winner-take-all" dynamics, and whether concentration has
 increased over time — with a panel regression testing candidate drivers
 (Discover Weekly-era algorithmic curation, TikTok-era virality).
 
+Analysis has been done for a span of a decade (2014-2024)
+
 ## The one thing to read before you do anything else
 
 **The Spotify Web API does not expose historical raw stream counts.** It gives
