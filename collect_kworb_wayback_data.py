@@ -76,11 +76,29 @@ HEADERS = {
                   "contact: replace-with-your-email@example.com)"
 }
 
-CDX_API = "http://web.archive.org/cdx/search/cdx"
-WAYBACK_BASE = "http://web.archive.org/web"
+# IMPORTANT: use https, not http. Plain http:// requests to archive.org
+# are prone to hanging/timing out on many networks (including Colab) --
+# this was the root cause of "ReadTimeoutError" failures in earlier runs.
+CDX_API = "https://web.archive.org/cdx/search/cdx"
+WAYBACK_BASE = "https://web.archive.org/web"
+
+# Reusable session with automatic retries for transient failures
+# (archive.org is a free public service and can be slow/flaky under load).
+_session = requests.Session()
+_retry_adapter = requests.adapters.HTTPAdapter(
+    max_retries=requests.packages.urllib3.util.retry.Retry(
+        total=3,
+        backoff_factor=2,          # waits 2s, 4s, 8s between retries
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+    )
+)
+_session.mount("https://", _retry_adapter)
+_session.mount("http://", _retry_adapter)
+REQUEST_TIMEOUT = 60  # archive.org can be slow; give it more room than 30s
 
 
-def find_snapshot(target_url, date_str, search_window_days=10):
+def find_snapshot(target_url, date_str, search_window_days=20):
     """
     Uses the Wayback CDX API to find the snapshot of `target_url` closest
     to `date_str` (YYYY-MM-DD), searching up to `search_window_days` before
@@ -98,9 +116,16 @@ def find_snapshot(target_url, date_str, search_window_days=10):
         "filter": "statuscode:200",
         "limit": 50,
     }
-    resp = requests.get(CDX_API, params=params, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    rows = resp.json()
+    try:
+        resp = _session.get(CDX_API, params=params, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        rows = resp.json()
+    except requests.RequestException as e:
+        print(f"  [warn] CDX lookup failed for {date_str}: {e}")
+        return None
+    except ValueError as e:  # JSON decode failure (e.g. empty/garbled response)
+        print(f"  [warn] CDX lookup returned unparseable data for {date_str}: {e}")
+        return None
 
     if len(rows) <= 1:  # first row is just the header
         return None
@@ -206,7 +231,7 @@ def build_panel_from_wayback():
         print(f"  -> using snapshot from {actual_date} ({snapshot_url})")
 
         try:
-            resp = requests.get(snapshot_url, headers=HEADERS, timeout=30)
+            resp = _session.get(snapshot_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
             resp.raise_for_status()
         except requests.RequestException as e:
             print(f"  [warn] failed to fetch snapshot: {e}")
